@@ -137,16 +137,16 @@ public class NeuralNetwork{
             double[][] z = multiplyMatrices(weights[i], activation);
             z = addBias(z, biases[i]);
             zs.add(z);
-            activation = ReLUVector(z);
+            activation = sigmoidVector(z);
             activations.add(activation);
         }
         double[][] delta = vectorSubstraction(activations.get(activations.size()-1), y);
-        delta = hadamardProduct(delta, primeReLUVector(zs.get(zs.size()-1)));
+        delta = hadamardProduct(delta, primeSigmoidVector(zs.get(zs.size()-1)));
         nabla_b[nabla_b.length-1] = getOneDimentionalVector(delta);
         nabla_w[nabla_w.length-1]=multiplyMatrices(delta, transpose(activations.get(activations.size()-2)));
         for(int i=2;i<numLayers;i++){
             double[][] z = zs.get(zs.size()-i);
-            double[][] sp = primeReLUVector(z);
+            double[][] sp = primeSigmoidVector(z);
             delta = multiplyMatrices(transpose(weights[weights.length-i+1]),delta);
             delta = hadamardProduct(delta, sp);
             nabla_b[nabla_b.length-i] = getOneDimentionalVector(delta);
@@ -162,7 +162,7 @@ public class NeuralNetwork{
         for (int i = 0; i < numLayers - 1; i++) {
             activation = multiplyMatrices(weights[i], activation);
             activation = addBias(activation, biases[i]);
-            activation = ReLUVector(activation);
+            activation = sigmoidVector(activation);
         }
     
         return argMax(activation);
