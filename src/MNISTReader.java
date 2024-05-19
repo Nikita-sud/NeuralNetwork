@@ -5,7 +5,6 @@ import java.util.Collections;
 import java.util.List;
 
 public class MNISTReader {
-    
 
     public static void main(String[] args) throws IOException {
         String imagesFile = "/Users/nichitabulgaru/Documents/NN/NN/data/train-images.idx3-ubyte";
@@ -29,7 +28,7 @@ public class MNISTReader {
             int magicNumberLabels = labels.readInt();
             int numberOfLabels = labels.readInt();
 
-            List<ImageData> dataset = new ArrayList<>();;
+            List<ImageData> dataset = new ArrayList<>();
             for (int i = 0; i < numberOfImages; i++) {
                 // Read and normalize image data
                 double[][] imageData = new double[rows][cols];
@@ -42,10 +41,10 @@ public class MNISTReader {
                 // Read label
                 int label = labels.readUnsignedByte();
                 double[][] arrayLabel = new double[10][1];
-                for(int j=0;j<10;j++){
-                    if(j==label) arrayLabel[j][0] = 1;
-                    else arrayLabel[j][0] = 0;
+                for (int j = 0; j < 10; j++) {
+                    arrayLabel[j][0] = (j == label) ? 1.0 : 0.0;
                 }
+
                 double[][] preparedImageData = new double[784][1];
                 int index = 0;
                 for (int m = 0; m < 28; m++) {
@@ -60,5 +59,15 @@ public class MNISTReader {
 
             return dataset;
         }
+    }
+}
+
+class ImageData {
+    public double[][] imageData;
+    public double[][] label;
+
+    public ImageData(double[][] imageData, double[][] label) {
+        this.imageData = imageData;
+        this.label = label;
     }
 }
