@@ -82,22 +82,22 @@ public class NeuralNetwork {
 
             for (int j = 0; j < nabla_b.length; j++) {
                 for (int m = 0; m < nabla_b[j].length; m++) {
-                    nabla_b[j][m] -= delta_nabla_b[j][m];
+                    nabla_b[j][m] += delta_nabla_b[j][m];
                 }
             }
+        }
 
-            for (int j = 0; j < weights.length; j++) {
-                for (int m = 0; m < weights[j].length; m++) {
-                    for (int n = 0; n < weights[j][m].length; n++) {
-                        this.weights[j][m][n] -= (eta / miniBatch.size()) * nabla_w[j][m][n];
-                    }
+        for (int j = 0; j < weights.length; j++) {
+            for (int m = 0; m < weights[j].length; m++) {
+                for (int n = 0; n < weights[j][m].length; n++) {
+                    this.weights[j][m][n] -= (eta / miniBatch.size()) * nabla_w[j][m][n];
                 }
             }
+        }
 
-            for (int j = 0; j < weights.length; j++) {
-                for (int m = 0; m < weights[j].length; m++) {
-                    this.biases[j][m] -= (eta / miniBatch.size()) * nabla_b[j][m];
-                }
+        for (int j = 0; j < biases.length; j++) {
+            for (int m = 0; m < biases[j].length; m++) {
+                this.biases[j][m] -= (eta / miniBatch.size()) * nabla_b[j][m];
             }
         }
     }
@@ -131,8 +131,7 @@ public class NeuralNetwork {
             activations.add(activation);
         }
 
-        double[][] delta = vectorSubstraction(activations.get(activations.size() - 1), y);
-        delta = hadamardProduct(delta, primeSigmoidVector(zs.get(zs.size() - 1)));
+        double[][] delta = crossEntropyDelta(activations.get(activations.size() - 1), y, zs.get(zs.size() - 1));
         nabla_b[nabla_b.length - 1] = getOneDimentionalVector(delta);
         nabla_w[nabla_w.length - 1] = multiplyMatrices(delta, transpose(activations.get(activations.size() - 2)));
 
@@ -146,6 +145,10 @@ public class NeuralNetwork {
         }
 
         return new backPropResult(nabla_w, nabla_b);
+    }
+
+    private double[][] crossEntropyDelta(double[][] outputActivations, double[][] y, double[][] z) {
+        return vectorSubstraction(outputActivations, y);
     }
 
     public int predict(double[][] input) {
@@ -367,7 +370,7 @@ public class NeuralNetwork {
         List<ImageData> trainingDataset = MNISTReader.readMNISTData(trainingImagesFile, trainingLabelsFile);
         List<ImageData> testDataset = MNISTReader.readMNISTData(testImagesFile, testingLabelsFile);
 
-        network.SGD(trainingDataset, 30, 100, 2, testDataset);
+        network.SGD(trainingDataset, 30, 100, 0.5, testDataset);
         for (int i = 0; i < 10; i++) {
             System.out.println("Predicted: " + network.predict(testDataset.get(i).imageData));
             System.out.println("Actual: " + argMax(testDataset.get(i).label));
