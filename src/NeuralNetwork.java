@@ -7,6 +7,7 @@ import java.util.Random;
 
 public class NeuralNetwork {
     private int numLayers;
+    @SuppressWarnings("unused")
     private int[] sizes;
     private double[][][] weights;
     private double[][] biases;
@@ -42,6 +43,7 @@ public class NeuralNetwork {
 
     public void SGD(List<ImageData> training_data, int epochs, int mini_batch_size, double eta, List<ImageData> test_data) {
         int n_test = test_data.size();
+        @SuppressWarnings("unused")
         int n = training_data.size();
 
         for (int i = 0; i < epochs; i++) {
@@ -103,6 +105,7 @@ public class NeuralNetwork {
     }
 
     public backPropResult backprop(double[][] x, double[][] y) {
+        // Initialize gradients for biases and weights
         double[][] nabla_b = new double[this.biases.length][];
         for (int i = 0; i < this.biases.length; i++) {
             nabla_b[i] = new double[this.biases[i].length];
@@ -116,50 +119,63 @@ public class NeuralNetwork {
                 Arrays.fill(nabla_w[i][j], 0.0); // Fill with zeros
             }
         }
-
-        // feedforward
+        
+        // Feedforward
         double[][] activation = x;
         List<double[][]> activations = new ArrayList<>();
         activations.add(x);
         List<double[][]> zs = new ArrayList<>();
-
-        for (int i = 0; i < numLayers - 1; i++) {
+        
+        for (int i = 0; i < numLayers - 2; i++) {
             double[][] z = multiplyMatrices(weights[i], activation);
             z = addBias(z, biases[i]);
             zs.add(z);
-            activation = sigmoidVector(z);
+            activation = ReLUVector(z);
             activations.add(activation);
         }
-
-        double[][] delta = crossEntropyDelta(activations.get(activations.size() - 1), y, zs.get(zs.size() - 1));
-        nabla_b[nabla_b.length - 1] = getOneDimentionalVector(delta);
+        
+        // Последний слой с softmax
+        double[][] z = multiplyMatrices(weights[numLayers - 2], activation);
+        z = addBias(z, biases[numLayers - 2]);
+        zs.add(z);
+        activation = softmaxVector(z);
+        activations.add(activation);
+        
+        // Backward pass
+        double[][] delta = crossEntropyDelta(activations.get(activations.size() - 1), y);
+        nabla_b[nabla_b.length - 1] = getOneDimensionalVector(delta);
         nabla_w[nabla_w.length - 1] = multiplyMatrices(delta, transpose(activations.get(activations.size() - 2)));
-
+        
         for (int i = 2; i < numLayers; i++) {
-            double[][] z = zs.get(zs.size() - i);
-            double[][] sp = primeSigmoidVector(z);
+            z = zs.get(zs.size() - i);
+            double[][] sp = primeReLUVector(z);
             delta = multiplyMatrices(transpose(weights[weights.length - i + 1]), delta);
             delta = hadamardProduct(delta, sp);
-            nabla_b[nabla_b.length - i] = getOneDimentionalVector(delta);
+            nabla_b[nabla_b.length - i] = getOneDimensionalVector(delta);
             nabla_w[nabla_w.length - i] = multiplyMatrices(delta, transpose(activations.get(activations.size() - i - 1)));
         }
-
+        
         return new backPropResult(nabla_w, nabla_b);
     }
 
-    private double[][] crossEntropyDelta(double[][] outputActivations, double[][] y, double[][] z) {
+    private double[][] crossEntropyDelta(double[][] outputActivations, double[][] y) {
         return vectorSubstraction(outputActivations, y);
     }
 
     public int predict(double[][] input) {
         double[][] activation = input;
-
-        for (int i = 0; i < numLayers - 1; i++) {
+        
+        for (int i = 0; i < numLayers - 2; i++) { // Все слои, кроме последнего
             activation = multiplyMatrices(weights[i], activation);
             activation = addBias(activation, biases[i]);
-            activation = sigmoidVector(activation);
+            activation = ReLUVector(activation);
         }
-
+        
+        // Последний слой с softmax
+        activation = multiplyMatrices(weights[numLayers - 2], activation);
+        activation = addBias(activation, biases[numLayers - 2]);
+        activation = softmaxVector(activation);
+        
         return argMax(activation);
     }
 
@@ -187,14 +203,14 @@ public class NeuralNetwork {
         return maxIndex;
     }
 
-    public static double[] getOneDimentionalVector(double[][] x) {
+    public static double[] getOneDimensionalVector(double[][] x) {
         double[] result = new double[x.length];
         for (int i = 0; i < x.length; i++) {
             result[i] = x[i][0];
         }
         return result;
     }
-
+    
     public static double[][] get2DimentionalVector(double[] x) {
         double[][] result = new double[x.length][1];
         for (int i = 0; i < x.length; i++) {
@@ -350,6 +366,33 @@ public class NeuralNetwork {
         return result;
     }
 
+    public static double[] softmax(double[] z) {
+        double max = Arrays.stream(z).max().getAsDouble(); // Для предотвращения переполнения
+        double sum = 0.0;
+        double[] result = new double[z.length];
+        for (int i = 0; i < z.length; i++) {
+            result[i] = Math.exp(z[i] - max);
+            sum += result[i];
+        }
+        for (int i = 0; i < z.length; i++) {
+            result[i] /= sum;
+        }
+        return result;
+    }
+    
+    public static double[][] softmaxVector(double[][] z) {
+        double[][] result = new double[z.length][1];
+        double[] flatZ = new double[z.length];
+        for (int i = 0; i < z.length; i++) {
+            flatZ[i] = z[i][0];
+        }
+        double[] flatResult = softmax(flatZ);
+        for (int i = 0; i < result.length; i++) {
+            result[i][0] = flatResult[i];
+        }
+        return result;
+    }
+
     public double[][][] getWeights() {
         return weights;
     }
@@ -359,7 +402,7 @@ public class NeuralNetwork {
     }
 
     public static void main(String[] args) throws IOException {
-        NeuralNetwork network = new NeuralNetwork(new int[]{784, 30, 10});
+        NeuralNetwork network = new NeuralNetwork(new int[]{784, 60, 10});
 
         String trainingImagesFile = "/Users/nichitabulgaru/Documents/NN/NN/data/train-images.idx3-ubyte";
         String trainingLabelsFile = "/Users/nichitabulgaru/Documents/NN/NN/data/train-labels.idx1-ubyte";
@@ -370,7 +413,7 @@ public class NeuralNetwork {
         List<ImageData> trainingDataset = MNISTReader.readMNISTData(trainingImagesFile, trainingLabelsFile);
         List<ImageData> testDataset = MNISTReader.readMNISTData(testImagesFile, testingLabelsFile);
 
-        network.SGD(trainingDataset, 30, 100, 0.5, testDataset);
+        network.SGD(trainingDataset, 40, 100, 0.1, testDataset);
         for (int i = 0; i < 10; i++) {
             System.out.println("Predicted: " + network.predict(testDataset.get(i).imageData));
             System.out.println("Actual: " + argMax(testDataset.get(i).label));

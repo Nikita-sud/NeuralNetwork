@@ -20,12 +20,15 @@ public class MNISTReader {
         try (DataInputStream images = new DataInputStream(new BufferedInputStream(new FileInputStream(imagesFile)));
              DataInputStream labels = new DataInputStream(new BufferedInputStream(new FileInputStream(labelsFile)))) {
             
+            @SuppressWarnings("unused")
             int magicNumberImages = images.readInt();
             int numberOfImages = images.readInt();
             int rows = images.readInt();
             int cols = images.readInt();
 
+            @SuppressWarnings("unused")
             int magicNumberLabels = labels.readInt();
+            @SuppressWarnings("unused")
             int numberOfLabels = labels.readInt();
 
             List<ImageData> dataset = new ArrayList<>();
